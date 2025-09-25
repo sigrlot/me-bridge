@@ -1,0 +1,19 @@
+version: v2
+
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.33.0
+    out: api
+    opt:
+      - paths=source_relative
+  # - remote: buf.build/grpc/go:v1.3.0
+  #   out: api
+  #   opt:
+  #     - paths=source_relative
+  #     - require_unimplemented_servers=false
+  # - remote: buf.build/bufbuild/validate-go:v1.2.1
+  #   out: api
+  #   opt: 
+  #     - paths=source_relative
+  # - local: protoc-gen-go-http
+  #   out: api
+  #   opt: paths=source_relative

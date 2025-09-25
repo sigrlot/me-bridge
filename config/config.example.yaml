@@ -1,0 +1,63 @@
+api:
+  IP: "127.0.0.1"
+  port: 8080
+  timeout: 30
+
+kms:
+  type: "aws"
+  region: "us-east-1"
+
+chains:
+  - network: "ethereum"
+    chain_id: "1"
+    max_conns: 10
+    target_configs:
+      - name: "mainnet"
+        uri: "https://mainnet.infura.io/v3/your-key"
+        grpc_port: "9090"
+        rpc_port: "8545"
+        ws_port: "8546"
+  - network: "bsc"
+    chain_id: "56"
+    max_conns: 5
+    target_configs:
+      - name: "bsc-mainnet"
+        uri: "https://bsc-dataseed.binance.org"
+        grpc_port: "9090"
+        rpc_port: "8545"
+        ws_port: "8546"
+
+bridges:
+  - name: "eth-bsc-bridge"
+    source:
+      network: "ethereum"
+      contract_address: "0x1234567890123456789012345678901234567890"
+      source_key_id: "key-eth"
+      confirm_blocks: 12
+    target:
+      network: "bsc"
+      contract_address: "0x0987654321098765432109876543210987654321"
+      source_key_id: "key-bsc"
+      confirm_blocks: 3
+    max_retries: 3
+    retry_interval: 5000
+
+postgres:
+  host: "localhost"
+  port: "5432"
+  user: "bridge_user"
+  password: "bridge_password"
+  database: "bridge_db"
+  timeout: 30000
+  max_open_conns: 25
+  max_idle_conns: 5
+
+logger:
+  level: "info"
+  format: "ethereum"
+  output: "stdout"
+
+trace:
+  jaeger_host: "localhost:14268"
+  enable: false
+  sample_rate: 0.1
