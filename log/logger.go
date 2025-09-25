@@ -8,11 +8,11 @@ import (
 )
 
 // Global logger instance
-var globalLogger *Logger
+var RootLogger *Logger
 
 // DefaultConfig returns default logging configuration
-func DefaultConfig() *LoggerConfig {
-	return &LoggerConfig{
+func DefaultConfig() *Config {
+	return &Config{
 		Level:  "info",
 		Format: "ethereum",
 		Output: "stdout",
@@ -21,7 +21,7 @@ func DefaultConfig() *LoggerConfig {
 }
 
 // Init initializes the global logger with given configuration
-func SetLogger(config *LoggerConfig) error {
+func SetLogger(config *Config) error {
 	if config == nil {
 		config = DefaultConfig()
 	}
@@ -35,92 +35,56 @@ func SetLogger(config *LoggerConfig) error {
 		return fmt.Errorf("failed to create logger: %w", err)
 	}
 
-	globalLogger = logger
+	RootLogger = logger
 	return nil
 }
 
 // GetLogger returns the global logger instance
 func GetLogger() *Logger {
-	if globalLogger == nil {
+	if RootLogger == nil {
 		// Initialize with default config if not initialized
 		_ = SetLogger(nil)
 	}
-	return globalLogger
+	return RootLogger
 }
 
 // Global convenience functions
-func Trace(msg string) {
-	GetLogger().Trace(msg)
-}
-
-func Tracef(format string, args ...interface{}) {
-	GetLogger().Tracef(format, args...)
-}
-
-func Debug(msg string) {
-	GetLogger().Debug(msg)
-}
-
-func Debugf(format string, args ...interface{}) {
-	GetLogger().Debugf(format, args...)
-}
-
-func Info(msg string) {
-	GetLogger().Info(msg)
-}
-
-func Infof(format string, args ...interface{}) {
-	GetLogger().Infof(format, args...)
-}
-
-func Warn(msg string) {
-	GetLogger().Warn(msg)
-}
-
-func Warnf(format string, args ...interface{}) {
-	GetLogger().Warnf(format, args...)
-}
-
-func Error(msg string) {
-	GetLogger().Error(msg)
-}
-
-func Errorf(format string, args ...interface{}) {
-	GetLogger().Errorf(format, args...)
-}
-
-func Fatal(msg string) {
-	GetLogger().Fatal(msg)
-}
-
-func Fatalf(format string, args ...interface{}) {
-	GetLogger().Fatalf(format, args...)
-}
-
-func Panic(msg string) {
-	GetLogger().Panic(msg)
-}
-
-func Panicf(format string, args ...interface{}) {
-	GetLogger().Panicf(format, args...)
-}
-
-// WithFields creates a new logger with additional fields
-func WithFields(fields map[string]interface{}) *Logger {
-	return GetLogger().WithFields(fields)
-}
-
-// WithField creates a new logger with additional field
-func WithField(key string, value interface{}) *Logger {
-	return GetLogger().WithField(key, value)
-}
-
-// WithComponent creates a new logger with component field
 func WithComponent(component string) *Logger {
 	return GetLogger().WithComponent(component)
 }
 
-// WithError creates a new logger with error field
+func WithFields(fields ...map[string]any) *Logger {
+	return GetLogger().WithFields(fields...)
+}
+
 func WithError(err error) *Logger {
 	return GetLogger().WithError(err)
+}
+
+func Trace(msg string, fields ...map[string]any) {
+	GetLogger().Trace(msg, fields...)
+}
+
+func Debug(msg string, fields ...map[string]any) {
+	GetLogger().Debug(msg, fields...)
+}
+
+func Info(msg string, fields ...map[string]any) {
+	GetLogger().Info(msg, fields...)
+}
+
+func Warn(msg string, fields ...map[string]any) {
+	GetLogger().Warn(msg, fields...)
+}
+
+func Error(msg string, fields ...map[string]any) {
+	GetLogger().Error(msg, fields...)
+}
+
+func Fatal(msg string, fields ...map[string]any) {
+	GetLogger().Fatal(msg, fields...)
+}
+
+func Panic(msg string, fields ...map[string]any) {
+	GetLogger().Panic(msg, fields...)
 }

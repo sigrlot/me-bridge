@@ -41,7 +41,7 @@ func NewSubscriptionManager(rpcURL, wsURL string) (*SubscriptionManager, error) 
 	return &SubscriptionManager{
 		client:    client,
 		wsClient:  wsClient,
-		callbacks: make(map[string]func(interface{})),
+		callbacks: make(map[string]func(any)),
 	}, nil
 }
 

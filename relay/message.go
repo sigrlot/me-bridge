@@ -13,8 +13,8 @@ func (m *RelayMsg) String() string {
 	return fmt.Sprintf("RelayMsg{TxHash: %s, Sender: %s, Receiver: %s, Amount: %s}", m.TxHash, m.Sender, m.Receiver, m.Amount)
 }
 
-func (m *RelayMsg) Map() map[string]interface{} {
-	return map[string]interface{}{
+func (m *RelayMsg) Map() map[string]any {
+	return map[string]any{
 		"hash":     m.TxHash,
 		"sender":   m.Sender,
 		"receiver": m.Receiver,

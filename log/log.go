@@ -14,12 +14,12 @@ import (
 
 // Logger wraps zerolog.Logger to provide additional functionality
 type Logger struct {
-	config *LoggerConfig
+	config *Config
 	logger zerolog.Logger
 }
 
 // NewLogger creates a new logger with given configuration
-func NewLogger(config *LoggerConfig) (*Logger, error) {
+func NewLogger(config *Config) (*Logger, error) {
 	// Set log level
 	level, err := zerolog.ParseLevel(config.Level)
 	if err != nil {
@@ -102,13 +102,15 @@ func (l *Logger) WithComponent(component string) *Logger {
 }
 
 // WithFields creates a new logger with additional fields
-func (l *Logger) withFields(fields map[string]interface{}) *zerolog.Logger {
+func (l *Logger) WithFields(fields ...map[string]any) *Logger {
 	event := l.logger.With()
-	for k, v := range fields {
-		event = event.Interface(k, v)
+	for _, field := range fields {
+		for k, v := range field {
+			event = event.Interface(k, v)
+		}
 	}
-	logger := event.Logger()
-	return &logger
+
+	return &Logger{logger: event.Logger()}
 }
 
 // WithError creates a new logger with error field
@@ -116,72 +118,49 @@ func (l *Logger) WithError(err error) *Logger {
 	return &Logger{logger: l.logger.With().Err(err).Logger()}
 }
 
-// Trace logs a trace level message
-func (l *Logger) Trace(msg string, fields map[string]interface{}) {
-	l.withFields(fields).Trace().Msg(msg)
+// addFields adds fields to the raw logger
+func (l *Logger) addFields(fields ...map[string]any) *zerolog.Logger {
+	event := l.logger.With()
+	for _, field := range fields {
+		for k, v := range field {
+			event = event.Interface(k, v)
+		}
+	}
+	logger := event.Logger()
+	return &logger
 }
 
-// Tracef logs a trace level message with formatting
-func (l *Logger) Tracef(format string, args ...interface{}) {
-	l.logger.Trace().Msgf(format, args...)
+// Trace logs a trace level message
+func (l *Logger) Trace(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Trace().Msg(msg)
 }
 
 // Debug logs a debug level message
-func (l *Logger) Debug(msg string) {
-	l.logger.Debug().Msg(msg)
-}
-
-// Debugf logs a debug level message with formatting
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.logger.Debug().Msgf(format, args...)
+func (l *Logger) Debug(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Debug().Msg(msg)
 }
 
 // Info logs an info level message
-func (l *Logger) Info(msg string) {
-	l.logger.Info().Msg(msg)
-}
-
-// Infof logs an info level message with formatting
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.logger.Info().Msgf(format, args...)
+func (l *Logger) Info(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Info().Msg(msg)
 }
 
 // Warn logs a warn level message
-func (l *Logger) Warn(msg string) {
-	l.logger.Warn().Msg(msg)
-}
-
-// Warnf logs a warn level message with formatting
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.logger.Warn().Msgf(format, args...)
+func (l *Logger) Warn(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Warn().Msg(msg)
 }
 
 // Error logs an error level message
-func (l *Logger) Error(msg string) {
-	l.logger.Error().Msg(msg)
-}
-
-// Errorf logs an error level message with formatting
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.logger.Error().Msgf(format, args...)
+func (l *Logger) Error(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Error().Msg(msg)
 }
 
 // Fatal logs a fatal level message and exits
-func (l *Logger) Fatal(msg string) {
-	l.logger.Fatal().Msg(msg)
-}
-
-// Fatalf logs a fatal level message with formatting and exits
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.logger.Fatal().Msgf(format, args...)
+func (l *Logger) Fatal(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Fatal().Msg(msg)
 }
 
 // Panic logs a panic level message and panics
-func (l *Logger) Panic(msg string) {
-	l.logger.Panic().Msg(msg)
-}
-
-// Panicf logs a panic level message with formatting and panics
-func (l *Logger) Panicf(format string, args ...interface{}) {
-	l.logger.Panic().Msgf(format, args...)
+func (l *Logger) Panic(msg string, fields ...map[string]any) {
+	l.addFields(fields...).Panic().Msg(msg)
 }

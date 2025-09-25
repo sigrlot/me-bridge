@@ -31,12 +31,12 @@ func BenchmarkZerologJsonWithFields(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			l.WithFields(map[string]interface{}{
+			l.Info("benchmark test message", map[string]any{
 				"component":  "log",
 				"user_id":    12345,
 				"request_id": "req-abc-123",
 				"timestamp":  time.Now(),
-			}).Info("benchmark test message")
+			})
 		}
 	})
 }
@@ -74,12 +74,12 @@ func BenchmarkZerologConsoleWithFields(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			l.WithFields(map[string]interface{}{
+			l.Info("benchmark test message", map[string]any{
 				"component":  "log",
 				"user_id":    12345,
 				"request_id": "req-abc-123",
 				"timestamp":  time.Now(),
-			}).Info("benchmark test message")
+			})
 		}
 	})
 }
@@ -117,12 +117,12 @@ func BenchmarkZerologBeutWithFields(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			l.WithFields(map[string]interface{}{
+			l.Info("benchmark test message", map[string]any{
 				"component":  "log",
 				"user_id":    12345,
 				"request_id": "req-abc-123",
 				"timestamp":  time.Now(),
-			}).Info("benchmark test message")
+			})
 		}
 	})
 }

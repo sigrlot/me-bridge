@@ -20,7 +20,7 @@ type BeutConsoleWriter struct {
 // It parses JSON log entries and converts them to the format:
 // LEVEL[timestamp] [component] message field=value
 func (w BeutConsoleWriter) Write(p []byte) (n int, err error) {
-	var evt map[string]interface{}
+	var evt map[string]any
 
 	// Parse the JSON log entry
 	if err := json.Unmarshal(p, &evt); err != nil {
@@ -59,7 +59,7 @@ func (w BeutConsoleWriter) Write(p []byte) (n int, err error) {
 }
 
 // Helper function to get string field from parsed event
-func getStringField(evt map[string]interface{}, key, defaultValue string) string {
+func getStringField(evt map[string]any, key, defaultValue string) string {
 	if val, ok := evt[key]; ok {
 		if str, ok := val.(string); ok {
 			return str
@@ -114,7 +114,7 @@ func formatLogLine(level, timestamp, component, message, colorStart, colorEnd st
 }
 
 // extractExtraFields extracts additional fields from the log event
-func extractExtraFields(evt map[string]interface{}) []string {
+func extractExtraFields(evt map[string]any) []string {
 	standardFields := map[string]bool{
 		"time":      true,
 		"level":     true,

@@ -18,11 +18,14 @@ func TestDefaultConfig(t *testing.T) {
 	if config.Level != "info" {
 		t.Errorf("Expected level 'info', got '%s'", config.Level)
 	}
-	if config.Format != "console" {
-		t.Errorf("Expected format 'console', got '%s'", config.Format)
+	if config.Format != "ethereum" {
+		t.Errorf("Expected format 'ethereum', got '%s'", config.Format)
 	}
 	if config.Output != "stdout" {
 		t.Errorf("Expected output 'stdout', got '%s'", config.Output)
+	}
+	if config.Path != "logs/app.log" {
+		t.Errorf("Expected output 'stdout', got '%s'", config.Path)
 	}
 }
 
@@ -70,12 +73,10 @@ func TestNewLoggerFileOutput(t *testing.T) {
 	logFile := filepath.Join(tempDir, "test.log")
 
 	config := &Config{
-		Level:    "info",
-		Format:   "json",
-		Output:   "file",
-		Filename: logFile,
-		MaxSize:  1,
-		MaxAge:   1,
+		Level:  "info",
+		Format: "json",
+		Output: "file",
+		Path:   logFile,
 	}
 
 	logger, err := NewLogger(config)
@@ -88,46 +89,6 @@ func TestNewLoggerFileOutput(t *testing.T) {
 	// Check if file exists
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		t.Error("Log file was not created")
-	}
-}
-
-func TestLoggerWithFields(t *testing.T) {
-	var buf bytes.Buffer
-
-	// Create a logger that writes to buffer for testing
-	zlog := zerolog.New(&buf).With().Timestamp().Logger()
-	logger := &Logger{logger: zlog}
-
-	fields := map[string]interface{}{
-		"user_id": 123,
-		"action":  "login",
-	}
-
-	logger.WithFields(fields).Info("user action")
-
-	output := buf.String()
-	if !strings.Contains(output, "user_id") {
-		t.Error("Expected log to contain 'user_id' field")
-	}
-	if !strings.Contains(output, "action") {
-		t.Error("Expected log to contain 'action' field")
-	}
-}
-
-func TestLoggerWithField(t *testing.T) {
-	var buf bytes.Buffer
-
-	zlog := zerolog.New(&buf).With().Timestamp().Logger()
-	logger := &Logger{logger: zlog}
-
-	logger.WithField("request_id", "req-123").Info("processing request")
-
-	output := buf.String()
-	if !strings.Contains(output, "request_id") {
-		t.Error("Expected log to contain 'request_id' field")
-	}
-	if !strings.Contains(output, "req-123") {
-		t.Error("Expected log to contain 'req-123' value")
 	}
 }
 
@@ -145,6 +106,29 @@ func TestLoggerWithComponent(t *testing.T) {
 	}
 	if !strings.Contains(output, "api") {
 		t.Error("Expected log to contain 'api' value")
+	}
+}
+
+func TestLoggerWithFields(t *testing.T) {
+	var buf bytes.Buffer
+
+	// Create a logger that writes to buffer for testing
+	zlog := zerolog.New(&buf).With().Timestamp().Logger()
+	logger := &Logger{logger: zlog}
+
+	fields := map[string]any{
+		"user_id": 123,
+		"action":  "login",
+	}
+
+	logger.WithFields(fields).Info("user action")
+
+	output := buf.String()
+	if !strings.Contains(output, "user_id") {
+		t.Error("Expected log to contain 'user_id' field")
+	}
+	if !strings.Contains(output, "action") {
+		t.Error("Expected log to contain 'action' field")
 	}
 }
 
@@ -200,20 +184,6 @@ func TestAllLogLevels(t *testing.T) {
 	}
 }
 
-func TestFormattedLogging(t *testing.T) {
-	var buf bytes.Buffer
-
-	zlog := zerolog.New(&buf).With().Timestamp().Logger()
-	logger := &Logger{logger: zlog}
-
-	logger.Infof("User %s has %d points", "john", 100)
-
-	output := buf.String()
-	if !strings.Contains(output, "User john has 100 points") {
-		t.Error("Expected formatted message in log output")
-	}
-}
-
 func TestGlobalLogger(t *testing.T) {
 	// Test that global logger is initialized
 	logger := GetLogger()
@@ -224,7 +194,7 @@ func TestGlobalLogger(t *testing.T) {
 	// Test global functions
 	var buf bytes.Buffer
 	zlog := zerolog.New(&buf)
-	globalLogger = &Logger{logger: zlog}
+	RootLogger = &Logger{logger: zlog}
 
 	Info("global info message")
 	output := buf.String()
@@ -234,9 +204,9 @@ func TestGlobalLogger(t *testing.T) {
 	}
 }
 
-func TestInit(t *testing.T) {
+func TestSetLogger(t *testing.T) {
 	// Test init with nil config (should use default)
-	err := Init(nil)
+	err := SetLogger(nil)
 	if err != nil {
 		t.Errorf("Init with nil config should not fail: %v", err)
 	}
@@ -244,13 +214,13 @@ func TestInit(t *testing.T) {
 	// Test init with custom config
 	tempDir := t.TempDir()
 	config := &Config{
-		Level:    "debug",
-		Format:   "json",
-		Output:   "file",
-		Filename: filepath.Join(tempDir, "init_test.log"),
+		Level:  "debug",
+		Format: "json",
+		Output: "file",
+		Path:   filepath.Join(tempDir, "init_test.log"),
 	}
 
-	err = Init(config)
+	err = SetLogger(config)
 	if err != nil {
 		t.Errorf("Init with custom config should not fail: %v", err)
 	}
@@ -263,12 +233,12 @@ func TestJSONOutput(t *testing.T) {
 	zlog := zerolog.New(&buf).With().Timestamp().Logger()
 	logger := &Logger{logger: zlog}
 
-	logger.WithField("test_field", "test_value").Info("json test message")
+	logger.Info("json test message", map[string]any{"test_field": "test_value"})
 
 	output := buf.String()
 
 	// Verify it's valid JSON
-	var jsonData map[string]interface{}
+	var jsonData map[string]any
 	if err := json.Unmarshal([]byte(output), &jsonData); err != nil {
 		t.Errorf("Output is not valid JSON: %v", err)
 	}
@@ -285,10 +255,10 @@ func TestJSONOutput(t *testing.T) {
 func TestConcurrentLogging(t *testing.T) {
 	tempDir := t.TempDir()
 	config := &Config{
-		Level:    "info",
-		Format:   "json",
-		Output:   "file",
-		Filename: filepath.Join(tempDir, "concurrent_test.log"),
+		Level:  "info",
+		Format: "json",
+		Output: "file",
+		Path:   filepath.Join(tempDir, "concurrent_test.log"),
 	}
 
 	logger, err := NewLogger(config)
@@ -301,7 +271,7 @@ func TestConcurrentLogging(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(id int) {
 			for j := 0; j < 100; j++ {
-				logger.WithField("goroutine", id).WithField("iteration", j).Info("concurrent message")
+				logger.Info("concurrent message", map[string]any{"goroutine": id, "iteration": j})
 			}
 			done <- true
 		}(i)
@@ -313,7 +283,7 @@ func TestConcurrentLogging(t *testing.T) {
 	}
 
 	// Just verify the file exists and is not empty
-	info, err := os.Stat(config.Filename)
+	info, err := os.Stat(config.Path)
 	if err != nil {
 		t.Errorf("Log file should exist: %v", err)
 	}
@@ -325,14 +295,10 @@ func TestConcurrentLogging(t *testing.T) {
 func TestLogRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	config := &Config{
-		Level:      "info",
-		Format:     "json",
-		Output:     "file",
-		Filename:   filepath.Join(tempDir, "rotation_test.log"),
-		MaxSize:    1, // 1MB - small for testing
-		MaxBackups: 2,
-		MaxAge:     1,
-		Compress:   false, // Don't compress for easier testing
+		Level:  "info",
+		Format: "json",
+		Output: "file",
+		Path:   filepath.Join(tempDir, "rotation_test.log"),
 	}
 
 	logger, err := NewLogger(config)
@@ -342,11 +308,11 @@ func TestLogRotation(t *testing.T) {
 
 	// Write some log messages
 	for i := 0; i < 1000; i++ {
-		logger.WithField("iteration", i).Info("This is a test message for log rotation functionality")
+		logger.Info("This is a test message for log rotation functionality", map[string]any{"iteration": i})
 	}
 
 	// Check if log file exists
-	if _, err := os.Stat(config.Filename); os.IsNotExist(err) {
+	if _, err := os.Stat(config.Path); os.IsNotExist(err) {
 		t.Error("Log file should exist")
 	}
 }
@@ -364,7 +330,7 @@ func TestEthereumFormat(t *testing.T) {
 	logger := &Logger{logger: zlog}
 
 	logger.WithComponent("p2p").Info("Started P2P networking")
-	logger.WithComponent("blockchain").WithField("number", 12345).Info("Imported new block")
+	logger.WithComponent("blockchain").Info("Imported new block", map[string]any{"number": 12345})
 
 	output := buf.String()
 
@@ -396,7 +362,7 @@ func TestPerformance(t *testing.T) {
 
 	// Log 10000 messages
 	for i := 0; i < 10000; i++ {
-		logger.WithField("iteration", i).Info("performance test message")
+		logger.Info("performance test message", map[string]any{"iteration": i})
 	}
 
 	duration := time.Since(start)

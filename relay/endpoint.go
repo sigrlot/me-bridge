@@ -26,7 +26,7 @@ func (e *Endpoint) LatestHeight() (int64, error) {
 }
 
 // Status 返回当前终端的可用性状态信息
-func (e *Endpoint) Status() map[string]interface{} {
+func (e *Endpoint) Status() map[string]any {
 	return nil
 }
 
