@@ -26,7 +26,7 @@ func NewRelayWithConfig(config *RelayConfig) *Relay {
 	target := NewEndpointWithConfig(config.Target)
 
 	return &Relay{
-		Source:   source,
+		Source:   source, 
 		Target:   target,
 		InChan:   make(chan *Message, 1000),
 		BackChan: make(chan *Message, 1000),

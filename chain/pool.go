@@ -2,10 +2,10 @@ package chain
 
 // ClientPool 观察同网络下的多个节点的最新状态，提供可用的节点，避免节点单点问题。
 type ClientPool struct {
-	Clients []*Client `json:"clients"`
+	Clients []*Monitor `json:"clients"`
 }
 
-func NewClientPool(clients []*Client) *ClientPool {
+func NewClientPool(clients []*Monitor) *ClientPool {
 	return &ClientPool{
 		Clients: clients,
 	}
@@ -21,12 +21,12 @@ func (p *ClientPool) LatestHeight() (int64, error) {
 	return 0, nil
 }
 
-func (p *ClientPool) GetClient() *Client {
+func (p *ClientPool) GetClient() *Monitor {
 	return nil
 }
 
 // ReplaceClient 替换当前使用的节点，返回新的节点，并重新创建订阅
-func (p *ClientPool) ReplaceClient() *Client {
+func (p *ClientPool) ReplaceClient() *Monitor {
 	return nil
 }
 
