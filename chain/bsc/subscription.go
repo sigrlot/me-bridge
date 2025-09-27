@@ -2,55 +2,32 @@ package bsc
 
 import (
 	"context"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/st-chain/me-bridge/chain"
+	"github.com/st-chain/me-bridge/relay"
 )
 
-const (
-	EthTopic    = "eth_topic"    // 以太坊订阅内容
-	TronTopic   = "tron_topic"   // 波场订阅内容
-	CosmosTopic = "cosmos_topic" // 宇宙订阅内容
-)
-
-
-// SubscriptionManager handles event subscriptions
-type SubscriptionManager struct {
-	client    *ethclient.Client
-	wsClient  *ethclient.Client
-	callbacks map[string]func(inter	TronTopic   = "tron_topic"   // 波场订阅内容
-face{})
+// BSC 跨链事件订阅主题
+var RelayTopic = [][]common.Hash{
+	{common.HexToHash("")},
 }
 
-// NewSubscriptionManager creates a new subscription manager
-func NewSubscriptionManager(rpcURL, wsURL string) (*SubscriptionManager, error) {
-	client, err := ethclient.Dial(rpcURL)
-	if err != nil {
-		return nil, err
-	}
+// TrackHeight tracks the latest block height
+func (c *Client) TrackHeight() error {
+	c.logger.Debug("Starting to track latest block height")
 
-	wsClient, err := ethclient.Dial(wsURL)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SubscriptionManager{
-		client:    client,
-		wsClient:  wsClient,
-		callbacks: make(map[string]func(any)),
-	}, nil
-}
-
-// SubscribeToNewBlocks subscribes to new block headers
-func (sm *SubscriptionManager) SubscribeToNewBlocks(callback func(*types.Header)) error {
 	headers := make(chan *types.Header)
-
-	sub, err := sm.wsClient.SubscribeNewHead(context.Background(), headers)
+	sub, err := c.WsClient.SubscribeNewHead(context.Background(), headers)
 	if err != nil {
+		c.logger.Error("Failed to subscribe to new block", map[string]any{
+			"wsurl": c.Config.WSURL,
+			"error": err,
+		})
 		return err
 	}
 
@@ -59,10 +36,13 @@ func (sm *SubscriptionManager) SubscribeToNewBlocks(callback func(*types.Header)
 		for {
 			select {
 			case err := <-sub.Err():
-				log.Printf("Subscription error: %v", err)
+				c.logger.Error("Subscription error", map[string]any{
+					"wsurl": c.Config.WSURL,
+					"error": err,
+				})
 				return
 			case header := <-headers:
-				callback(header)
+				c.latestHeight = header.Number.Uint64()
 			}
 		}
 	}()
@@ -70,53 +50,102 @@ func (sm *SubscriptionManager) SubscribeToNewBlocks(callback func(*types.Header)
 	return nil
 }
 
-// SubscribeToLogs subscribes to contract logs
-func (sm *SubscriptionManager) SubscribeToLogs(addresses []common.Address, topics [][]common.Hash, callback func(types.Log)) error {
-	query := ethereum.FilterQuery{
-		Addresses: addresses,
-		Topics:    topics,
+func (c *Client) ToRelayLog(vLog types.Log) (*chain.RelayLog, error) {
+	relayLog := &chain.RelayLog{
+		TxHash:   vLog.TxHash.Hex(),
+		Sender:   "", // 需要解析Data字段获取
+		Receiver: "", // 需要解析Data字段获取
+		Amount:   "", // 需要解析Data字段获取
 	}
-
-	logs := make(chan types.Log)
-	sub, err := sm.wsClient.SubscribeFilterLogs(context.Background(), query, logs)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case err := <-sub.Err():
-				log.Printf("Log subscription error: %v", err)
-				return
-			case vLog := <-logs:
-				callback(vLog)
-			}
-		}
-	}()
-
-	return nil
+	return relayLog, nil
 }
 
-// GetLogs retrieves logs for a specific filter
-func (sm *SubscriptionManager) GetLogs(fromBlock, toBlock *big.Int, addresses []common.Address, topics [][]common.Hash) ([]types.Log, error) {
+// GetRelayLogs retrieves relay logs for a specific filter
+func (c *Client) FilterRelayMsgs(fromBlock, toBlock *big.Int, address string) ([]*chain.RelayLog, error) {
+	relayLogs := []*chain.RelayLog{}
+
 	query := ethereum.FilterQuery{
 		FromBlock: fromBlock,
 		ToBlock:   toBlock,
-		Addresses: addresses,
-		Topics:    topics,
+		Addresses: []common.Address{common.HexToAddress(address)},
+		Topics:    RelayTopic,
 	}
 
-	return sm.client.FilterLogs(context.Background(), query)
+	rawLogs, err := c.Client.FilterLogs(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, rawLog := range rawLogs {
+		relayLog, err := c.ToRelayLog(rawLog)
+		if err != nil {
+			return nil, err
+		}
+		relayLogs = append(relayLogs, relayLog)
+	}
+
+	return relayLogs, nil
 }
 
-// Close closes all connections
-func (sm *SubscriptionManager) Close() {
-	if sm.client != nil {
-		sm.client.Close()
+// SubscribeToLogs subscribes to contract logs
+func (c *Client) SubscribeToRelayMsgs(address string) (<-chan relay.Message, error) {
+	relayMsgs := make(chan relay.Message)
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.HexToAddress(address)},
+		Topics:    RelayTopic,
 	}
-	if sm.wsClient != nil {
-		sm.wsClient.Close()
+
+	rawLogs := make(chan types.Log)
+	sub, err := c.WsClient.SubscribeFilterLogs(context.Background(), query, rawLogs)
+	if err != nil {
+		c.logger.Error("Failed to subscribe to relay logs", map[string]any{
+			"address": address,
+			"wsurl":   c.Config.WSURL,
+			"error":   err,
+		})
+		return nil, err
 	}
+
+	go func() {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case err := <-sub.Err():
+				c.logger.Error("Relay log subscription error", map[string]any{
+					"address": address,
+					"wsurl":   c.Config.WSURL,
+					"error":   err,
+				})
+				return
+			case rawLog := <-rawLogs:
+				relayLog, err := c.ToRelayLog(rawLog)
+				if err != nil {
+					c.logger.Error("Failed to parse relay log", map[string]any{
+						"log":   rawLog,
+						"error": err,
+					})
+					continue
+				}
+				relayMsgs <- relayLog
+			}
+		}
+	}()
+
+	return relayMsgs, nil
+}
+
+func (c *Client) ProcessRelayMsgs(relayMsgs <-chan relay.Message) error {
+	go func() {
+		select {
+		case relayMsg := <-relayMsgs:
+			c.logger.Info("Received new relay log", map[string]any{
+				"log": relayMsg,
+			})
+
+			// TODO:
+		}
+	}()
+
+	return nil
 }

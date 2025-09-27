@@ -2,115 +2,95 @@ package bsc
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"math/big"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
+	bscclient "github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/st-chain/me-bridge/chain"
+	"github.com/st-chain/me-bridge/log"
+	"github.com/st-chain/me-bridge/relay"
 )
 
-// BSCClient is a client for interacting with the Binance Smart Chain (BSC) network.
-type BSCClient struct {
-	client     *ethclient.Client
-	rpcClient  *rpc.Client
-	chainID    *big.Int
-	timeout    time.Duration
-	privateKey *ecdsa.PrivateKey
+var _ relay.Client = (*Client)(nil)
+
+// Client is a client for interacting with the Binance Smart Chain (BSC) network.
+type Client struct {
+	Network *chain.NetworkConfig
+	Config  *chain.ClientConfig
+
+	latestHeight uint64
+
+	Client   *bscclient.Client
+	WsClient *bscclient.Client
+	// key    signer.Signer
+	logger *log.Logger
 }
 
-// Config holds BSC client configuration
-type Config struct {
-	RPCURL     string
-	WSUrl      string
-	ChainID    int64
-	Timeout    time.Duration
-	PrivateKey string
-}
-
-// NewBSCClient creates a new BSC client instance
-func NewBSCClient(config *Config) (*BSCClient, error) {
+// NewClient creates a new BSC client instance
+func NewClient(network *chain.NetworkConfig, config *chain.ClientConfig) (*Client, error) {
 	// Connect to BSC node
-	client, err := ethclient.Dial(config.RPCURL)
+	client, err := bscclient.Dial(config.RPCURL)
 	if err != nil {
 		return nil, err
 	}
 
-	// Connect RPC client for advanced operations
-	rpcClient, err := rpc.Dial(config.RPCURL)
+	wsClient, err := ethclient.Dial(config.WSURL)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse private key
-	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
-	if err != nil {
-		return nil, err
-	}
+	return &Client{
+		Network: network,
+		Config:  config,
 
-	timeout := config.Timeout
-	if timeout == 0 {
-		timeout = 30 * time.Second
-	}
-
-	return &BSCClient{
-		client:     client,
-		rpcClient:  rpcClient,
-		chainID:    big.NewInt(config.ChainID),
-		timeout:    timeout,
-		privateKey: privateKey,
+		Client:   client,
+		WsClient: wsClient,
+		logger:   log.WithComponent("bsc-client"),
 	}, nil
 }
 
-// GetBalance returns the balance of an address
-func (c *BSCClient) GetBalance(address common.Address) (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
+func (c *Client) LatestHeight() uint64 {
+	return c.latestHeight
+}
 
-	return c.client.BalanceAt(ctx, address, nil)
+// GetBalance returns the balance of an address
+func (c *Client) GetBalance(address common.Address, blockNumber *big.Int) (*big.Int, error) {
+	return c.Client.BalanceAt(context.Background(), address, blockNumber)
 }
 
 // GetNonce returns the nonce for an address
-func (c *BSCClient) GetNonce(address common.Address) (uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	return c.client.PendingNonceAt(ctx, address)
+func (c *Client) GetNonce(address common.Address) (uint64, error) {
+	return c.Client.PendingNonceAt(context.Background(), address)
 }
 
 // GetGasPrice returns current gas price
-func (c *BSCClient) GetGasPrice() (*big.Int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	return c.client.SuggestGasPrice(ctx)
+func (c *Client) GetGasPrice() (*big.Int, error) {
+	return c.Client.SuggestGasPrice(context.Background())
 }
 
 // GetLatestBlock returns the latest block number
-func (c *BSCClient) GetLatestBlock() (*types.Header, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	return c.client.HeaderByNumber(ctx, nil)
+func (c *Client) GetLatestHeight() (uint64, error) {
+	header, err := c.Client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return 0, err
+	}
+	return header.Number.Uint64(), nil
 }
 
 // GetTransactionReceipt returns transaction receipt
-func (c *BSCClient) GetTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	return c.client.TransactionReceipt(ctx, txHash)
+func (c *Client) GetTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
+	return c.Client.TransactionReceipt(context.Background(), txHash)
 }
 
 // Close closes the client connections
-func (c *BSCClient) Close() {
-	if c.client != nil {
-		c.client.Close()
+func (c *Client) Close() {
+	if c.Client != nil {
+		c.Client.Close()
 	}
-	if c.rpcClient != nil {
-		c.rpcClient.Close()
+	if c.WsClient != nil {
+		c.WsClient.Close()
 	}
 }

@@ -11,36 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// Transaction represents a BSC transaction
-type Transaction struct {
-	To       common.Address
-	Value    *big.Int
-	Data     []byte
-	GasLimit uint64
-	GasPrice *big.Int
-	Nonce    uint64
-}
-
-// EstimateTransactionGas estimates gas for a BSC transaction
-func (c *BSCClient) EstimateTransactionGas(tx *Transaction) (uint64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
-
-	fromAddress := crypto.PubkeyToAddress(c.privateKey.PublicKey)
-
-	msg := ethereum.CallMsg{
-		From:     fromAddress,
-		To:       &tx.To,
-		Value:    tx.Value,
-		Data:     tx.Data,
-		GasPrice: tx.GasPrice,
-	}
-
-	return c.client.EstimateGas(ctx, msg)
-}
-
 // SendTransaction signs and sends a transaction to BSC
-func (c *BSCClient) SendTransaction(tx *Transaction) (*types.Transaction, error) {
+func (c *Client) SendTransaction(tx *Transaction) (*types.Transaction, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -61,7 +33,7 @@ func (c *BSCClient) SendTransaction(tx *Transaction) (*types.Transaction, error)
 	}
 
 	// Send the transaction
-	err = c.client.SendTransaction(ctx, signedTx)
+	err = c.Client.SendTransaction(ctx, signedTx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,34 +41,8 @@ func (c *BSCClient) SendTransaction(tx *Transaction) (*types.Transaction, error)
 	return signedTx, nil
 }
 
-// SendBNB sends BNB to an address
-func (c *BSCClient) SendBNB(to common.Address, amount *big.Int) (*types.Transaction, error) {
-	fromAddress := crypto.PubkeyToAddress(c.privateKey.PublicKey)
-
-	nonce, err := c.GetNonce(fromAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	gasPrice, err := c.GetGasPrice()
-	if err != nil {
-		return nil, err
-	}
-
-	tx := &Transaction{
-		To:       to,
-		Value:    amount,
-		Data:     nil,
-		GasLimit: 21000, // Standard gas limit for BNB transfer
-		GasPrice: gasPrice,
-		Nonce:    nonce,
-	}
-
-	return c.SendTransaction(tx)
-}
-
 // CallContract calls a smart contract method (read-only)
-func (c *BSCClient) CallContract(contractAddress common.Address, data []byte) ([]byte, error) {
+func (c *Client) CallContract(contractAddress common.Address, data []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -105,16 +51,16 @@ func (c *BSCClient) CallContract(contractAddress common.Address, data []byte) ([
 		Data: data,
 	}
 
-	return c.client.CallContract(ctx, msg, nil)
+	return c.Client.CallContract(ctx, msg, nil)
 }
 
 // WaitForTransactionReceipt waits for transaction to be mined
-func (c *BSCClient) WaitForTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
+func (c *Client) WaitForTransactionReceipt(txHash common.Hash) (*types.Receipt, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	for {
-		receipt, err := c.client.TransactionReceipt(ctx, txHash)
+		receipt, err := c.Client.TransactionReceipt(ctx, txHash)
 		if err == nil {
 			return receipt, nil
 		}

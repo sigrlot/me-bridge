@@ -1,7 +1,7 @@
 package chain
 
-// ClientPool stores clients for different networks
-var ClientPool map[string][]*Client
+// Networks stores clients for different networks
+var Networks map[string][]*Client
 
 // ClientBuilder builds a client based on network type
 func ClientBuilder(network string, config *ClientConfig) *Client {
@@ -23,14 +23,14 @@ func ClientsFactory(network string, configs []*ClientConfig) []*Client {
 		clients = append(clients, ClientBuilder(network, cfg))
 	}
 	// add clients to client pool
-	ClientPool[network] = clients
+	Networks[network] = clients
 
 	return clients
 }
 
 // ClientsProvider retrieves a client by network name
 func ClientsProvider(name string) []*Client {
-	if clients, exists := ClientPool[name]; exists && len(clients) > 0 {
+	if clients, exists := Networks[name]; exists && len(clients) > 0 {
 		return clients
 	}
 	return nil

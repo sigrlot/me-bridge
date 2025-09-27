@@ -1,8 +1,9 @@
-package chain
+package bsc
 
+import "errors"
 
-//  nonce已经被使用
-var ErrNonceUsed =  errors.New("nonce already used")
+// nonce已经被使用
+var ErrNonceUsed = errors.New("nonce already used")
 
 // 余额不足
 var ErrInsufficientBalance = errors.New("insufficient balance")

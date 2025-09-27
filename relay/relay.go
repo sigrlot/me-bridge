@@ -4,8 +4,8 @@ package relay
 type Relay struct {
 	Source   *Endpoint
 	Target   *Endpoint
-	InQueue  *Queue // 跨入消息列表
-	OutQueue *Queue // 跨出消息列表
+	InChan   chan *Message // 跨入消息列表
+	BackChan chan *Message // 跨出消息列表
 
 	FeeCalculator *FeeCalculator
 }
@@ -14,8 +14,10 @@ func NewRelay(source *Endpoint, target *Endpoint, feeCalculator FeeCalculator) *
 	return &Relay{
 		Source:   source,
 		Target:   target,
-		InQueue:  NewQueue(source, target),
-		OutQueue: NewQueue(source, target),
+		InChan:   make(chan *Message, 1000),
+		BackChan: make(chan *Message, 1000),
+
+		FeeCalculator: &feeCalculator,
 	}
 }
 
@@ -26,21 +28,16 @@ func NewRelayWithConfig(config *RelayConfig) *Relay {
 	return &Relay{
 		Source:   source,
 		Target:   target,
-		InQueue:  NewQueue(source, target),
-		OutQueue: NewQueue(target, source),
+		InChan:   make(chan *Message, 1000),
+		BackChan: make(chan *Message, 1000),
+
+		FeeCalculator: &FeeCalculator{},
 	}
 }
 
-func (b *Relay) Start() error {
-	log.Info("start relay")
-	// 启动监控，定期更新节点列表
-	go b.Source.Monitor()
-	go b.Target.Monitor()
+func (r *Relay) Work() error {
+	go r.Source.Work(r.InChan, r.BackChan)
+	go r.Target.Work(r.BackChan, r.InChan)
 
-	go b.Source.Subscribe(b.InQueue)
-	go b.Target.Subscribe(b.OutQueue)
-
-	// 启动工作协程，处理消息队列
-	go b.InQueue.Worker(b.Target)
-	go b.OutQueue.Worker(b.Source)
+	return nil
 }

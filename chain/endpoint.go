@@ -46,9 +46,17 @@ func (e *Endpoint) Monitor() {
 // AutoUpdate 自动定期更新可用节点
 func (e *Endpoint) AutoUpdate() {}
 
-func (e *Endpoint) Start() error {
+func (e *Endpoint) Work(local chan *RelayMsg, remote chan *RelayMsg) error {
 	go e.Monitor()
 	go e.AutoUpdate()
+
+	e.GetClient().SubscribeToLogs(func(source string, target string, sender string, receiver string, amount string){
+		local <- &RelayMsg{
+			Sender:   sender,
+			Receiver: receiver,
+			Amount:   amount,
+		}
+	})
 
 	return nil
 }
