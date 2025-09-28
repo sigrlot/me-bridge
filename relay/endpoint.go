@@ -8,7 +8,7 @@ type InEndpoint interface {
 
 // Watcher 订阅跨链消息
 type InWatcher interface {
-	SubscribeToInMsgs(address string) (<-chan InMsg, error)
+	SubscribeToInMsgs(address string, c <-chan InMsg) error
 }
 
 // Processor 处理跨链消息

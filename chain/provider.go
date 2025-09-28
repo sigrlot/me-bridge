@@ -1,10 +1,12 @@
 package chain
 
+import "time"
+
 // Networks stores clients for different networks
 var Networks map[string]*Cluster[Client]
 
 // ClientBuilder builds a client based on network type
-func ClientBuilder(network string, config *ClientConfig) *Worker {
+func ClientBuilder(network string, config *ClientConfig) Client {
 	switch network {
 	case "ethereum":
 		return NewEthereumClient(config)
@@ -16,22 +18,28 @@ func ClientBuilder(network string, config *ClientConfig) *Worker {
 	panic("unsupported network")
 }
 
-// ClientsFactory creates clients for a given network configuration
-func ClientsFactory(network string, configs []*ClientConfig) []*Worker {
-	var clients []*Worker
+// ClientsBuilder creates clients for a given network configuration
+func ClientsBuilder(network string, configs []*ClientConfig) []Client {
+	var clients []Client
 	for _, cfg := range configs {
 		clients = append(clients, ClientBuilder(network, cfg))
 	}
-	// add clients to client pool
-	Networks[network] = clients
 
 	return clients
 }
 
-// ClientsProvider retrieves a client by network name
-func ClientsProvider(name string) []*Worker {
-	if clients, exists := Networks[name]; exists && len(clients) > 0 {
-		return clients
+func ClusterFactory(network *NetworkConfig) {
+	if Networks == nil {
+		Networks = make(map[string]*Cluster[Client])
+	}
+	clients := ClientsBuilder(network.Name, network.ClientConfigs)
+	Networks[network.Name] = NewCluster[Client](clients, 30*time.Second)
+}
+
+// ClusterProvider retrieves a client by network name
+func ClusterProvider(name string) *Cluster[Client] {
+	if cluster, exists := Networks[name]; exists {
+		return cluster
 	}
 	return nil
 }

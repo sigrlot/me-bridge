@@ -12,7 +12,7 @@ type Server struct {
 
 func NewServerWithConfig(config *ServerConfig) *Server {
 	for _, netConfig := range config.Networks {
-		chain.ClientsFactory(netConfig.Name, netConfig.ClientConfigs)
+		chain.ClientsBuilder(netConfig.Name, netConfig.ClientConfigs)
 	}
 
 	relays := make(map[string]*relay.Relay)

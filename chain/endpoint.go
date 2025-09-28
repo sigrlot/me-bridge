@@ -6,7 +6,6 @@ import (
 	"github.com/st-chain/me-bridge/relay"
 )
 
-
 // InEndpoint 实现 relay.InEndpoint 接口，通过 Cluster 统一管理多个节点。
 type InEndpoint struct {
 	Config  *relay.EndpointConfig `json:"config"`
@@ -31,8 +30,8 @@ func (e *InEndpoint) Monitor() { e.cluster.Start() }
 func (e *InEndpoint) AutoUpdate() {}
 
 // Implement relay.InEndpoint by delegating to the current client in cluster.
-func (e *InEndpoint) SubscribeToInMsgs(address string) (<-chan relay.InMsg, error) {
-	return e.GetClient().SubscribeToInMsgs(address)
+func (e *InEndpoint) SubscribeToInMsgs(c <-chan relay.InMsg) error {
+	return e.GetClient().SubscribeToInMsgs(c)
 }
 
 func (e *InEndpoint) ProcessOutMsgs(msgs <-chan relay.OutMsg) error {

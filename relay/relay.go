@@ -2,15 +2,15 @@ package relay
 
 // Relay 代表一个跨链桥，它包含源终端、目标终端和消息队列
 type Relay struct {
-	Source   *InEndpoint
-	Target   *OutEndpoint
+	Source   InEndpoint
+	Target   OutEndpoint
 	InChan   chan *InMsg  // 跨入消息列表
 	BackChan chan *OutMsg // 跨出消息列表
 
 	FeeCalculator *FeeCalculator
 }
 
-func NewRelay(source *InEndpoint, target *OutEndpoint, feeCalculator FeeCalculator) *Relay {
+func NewRelay(source InEndpoint, target OutEndpoint, feeCalculator FeeCalculator) *Relay {
 	return &Relay{
 		Source:   source,
 		Target:   target,
@@ -22,8 +22,8 @@ func NewRelay(source *InEndpoint, target *OutEndpoint, feeCalculator FeeCalculat
 }
 
 func (r *Relay) Work() error {
-	// go r.Source.Work(r.InChan, r.BackChan)
-	// go r.Target.Work(r.BackChan, r.InChan)
+	r.Source.SubscribeToInMsgs()
+	go r.Source.ProcessOutMsgs(r.BackChan)
 
 	return nil
 }
