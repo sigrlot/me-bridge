@@ -21,20 +21,6 @@ func NewRelay(source *InEndpoint, target *OutEndpoint, feeCalculator FeeCalculat
 	}
 }
 
-func NewRelayWithConfig(config *RelayConfig) *Relay {
-	source := NewInEndpointWithConfig(config.Source)
-	target := NewOutEndpointWithConfig(config.Target)
-
-	return &Relay{
-		Source:   source,
-		Target:   target,
-		InChan:   make(chan *Message, 1000),
-		BackChan: make(chan *Message, 1000),
-
-		FeeCalculator: &FeeCalculator{},
-	}
-}
-
 func (r *Relay) Work() error {
 	// go r.Source.Work(r.InChan, r.BackChan)
 	// go r.Target.Work(r.BackChan, r.InChan)

@@ -1,7 +1,7 @@
 package chain
 
 // Networks stores clients for different networks
-var Networks map[string][]*Worker
+var Networks map[string]*Cluster[Client]
 
 // ClientBuilder builds a client based on network type
 func ClientBuilder(network string, config *ClientConfig) *Worker {
