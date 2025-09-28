@@ -7,10 +7,10 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-// Global logger instance
+// 全局日志器实例
 var RootLogger *Logger
 
-// DefaultConfig returns default logging configuration
+// DefaultConfig 返回默认日志配置
 func DefaultConfig() *Config {
 	return &Config{
 		Level:  "info",
@@ -20,16 +20,16 @@ func DefaultConfig() *Config {
 	}
 }
 
-// Init initializes the global logger with given configuration
+// SetLogger 使用给定配置初始化全局日志器
 func SetLogger(config *Config) error {
 	if config == nil {
 		config = DefaultConfig()
 	}
 
-	// Set error stack trace marshaler
+	// 设置错误堆栈跟踪序列化器
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
-	// Create logger
+	// 创建日志器
 	logger, err := NewLogger(config)
 	if err != nil {
 		return fmt.Errorf("failed to create logger: %w", err)
@@ -39,16 +39,16 @@ func SetLogger(config *Config) error {
 	return nil
 }
 
-// GetLogger returns the global logger instance
+// GetLogger 返回全局日志器实例
 func GetLogger() *Logger {
 	if RootLogger == nil {
-		// Initialize with default config if not initialized
+		// 如果未初始化，则使用默认配置初始化
 		_ = SetLogger(nil)
 	}
 	return RootLogger
 }
 
-// Global convenience functions
+// 全局便利函数
 func WithComponent(component string) *Logger {
 	return GetLogger().WithComponent(component)
 }

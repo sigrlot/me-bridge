@@ -29,16 +29,16 @@ func (e *InEndpoint) Monitor() { e.cluster.Start() }
 // AutoUpdate 自动定期更新可用节点
 func (e *InEndpoint) AutoUpdate() {}
 
-// Implement relay.InEndpoint by delegating to the current client in cluster.
-func (e *InEndpoint) SubscribeToInMsgs(c <-chan relay.InMsg) error {
-	return e.GetClient().SubscribeToInMsgs(c)
+// 通过委托给集群中的当前客户端来实现 relay.InEndpoint
+func (e *InEndpoint) SubscribeToInMsgs(contract string, c <-chan *relay.InMsg) error {
+	return e.GetClient().SubscribeToInMsgs(contract, c)
 }
 
-func (e *InEndpoint) ProcessOutMsgs(msgs <-chan relay.OutMsg) error {
+func (e *InEndpoint) ProcessOutMsgs(msgs <-chan *relay.OutMsg) error {
 	return e.GetClient().ProcessOutMsgs(msgs)
 }
 
-// NewInEndpoint constructs an InEndpoint with clients and monitoring interval.
+// NewInEndpoint 使用客户端和监控间隔构建 InEndpoint
 func NewInEndpoint(config *relay.EndpointConfig, clients []InClient, monitorInterval time.Duration) *InEndpoint {
 	ep := &InEndpoint{
 		Config:  config,
@@ -60,12 +60,12 @@ func (e *OutEndpoint) GetClient() OutClient { return e.cluster.Current() }
 
 func (e *OutEndpoint) ReplaceClient() OutClient { return e.cluster.ReplaceClient() }
 
-// Implement relay.OutEndpoint by delegating to current client
-func (e *OutEndpoint) ProcessInMsgs(msgs <-chan relay.InMsg) error {
+// 通过委托给当前客户端来实现 relay.OutEndpoint
+func (e *OutEndpoint) ProcessInMsgs(msgs <-chan *relay.InMsg) error {
 	return e.GetClient().ProcessInMsgs(msgs)
 }
 
-func (e *OutEndpoint) SubscribeToOutMsgs() (<-chan relay.OutMsg, error) {
+func (e *OutEndpoint) SubscribeToOutMsgs() (<-chan *relay.OutMsg, error) {
 	return e.GetClient().SubscribeToOutMsgs()
 }
 
@@ -77,7 +77,7 @@ func (e *OutEndpoint) SubscribeToBatchMsgs() (<-chan relay.BatchMsg, error) {
 	return e.GetClient().SubscribeToBatchMsgs()
 }
 
-// NewOutEndpoint constructs an OutEndpoint with clients and monitoring interval.
+// NewOutEndpoint 使用客户端和监控间隔构建 OutEndpoint
 func NewOutEndpoint(config *relay.EndpointConfig, clients []OutClient, monitorInterval time.Duration) *OutEndpoint {
 	ep := &OutEndpoint{
 		Config:  config,

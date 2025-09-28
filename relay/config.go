@@ -21,6 +21,6 @@ type RelayConfig struct {
 type EndpointConfig struct {
 	Network         string `yaml:"network" json:"network"`                   // 网络名称
 	ContractAddress string `yaml:"contract_address" json:"contract_address"` // 合约地址
-	SourceKeyID     string `yaml:"source_key_id" json:"source_key_id"`       // 签名密钥 ID
+	KeyID           string `yaml:"key_id" json:"key_id"`                     // 签名密钥 ID
 	ConfirmBlocks   int32  `yaml:"confirm_blocks" json:"confirm_blocks"`     // 确认块数
 }
