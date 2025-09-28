@@ -17,17 +17,18 @@ type OutProcessor interface {
 }
 
 type OutEndpoint interface {
-	OutWatcher
 	InProcessor
-}
-
-// Watcher 订阅跨链消息
-type OutWatcher interface {
-	SubscribeToOutMsgs(address string) (<-chan OutMsg, error)
-	ConfirmOutMsgs(msgs []OutMsg) error
+	OutWatcher
 }
 
 // Processor 处理跨链消息
 type InProcessor interface {
 	ProcessInMsgs(msgs <-chan InMsg) error
+}
+
+// Watcher 订阅跨链消息
+type OutWatcher interface {
+	SubscribeToOutMsgs() (<-chan OutMsg, error)
+	ConfirmOutMsgs(msgs []OutMsg) error
+	SubscribeToBatchMsgs() (<-chan BatchMsg, error)
 }

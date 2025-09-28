@@ -1,10 +1,10 @@
 package chain
 
 // Networks stores clients for different networks
-var Networks map[string][]*Monitor
+var Networks map[string][]*Worker
 
 // ClientBuilder builds a client based on network type
-func ClientBuilder(network string, config *ClientConfig) *Monitor {
+func ClientBuilder(network string, config *ClientConfig) *Worker {
 	switch network {
 	case "ethereum":
 		return NewEthereumClient(config)
@@ -17,8 +17,8 @@ func ClientBuilder(network string, config *ClientConfig) *Monitor {
 }
 
 // ClientsFactory creates clients for a given network configuration
-func ClientsFactory(network string, configs []*ClientConfig) []*Monitor {
-	var clients []*Monitor
+func ClientsFactory(network string, configs []*ClientConfig) []*Worker {
+	var clients []*Worker
 	for _, cfg := range configs {
 		clients = append(clients, ClientBuilder(network, cfg))
 	}
@@ -29,7 +29,7 @@ func ClientsFactory(network string, configs []*ClientConfig) []*Monitor {
 }
 
 // ClientsProvider retrieves a client by network name
-func ClientsProvider(name string) []*Monitor {
+func ClientsProvider(name string) []*Worker {
 	if clients, exists := Networks[name]; exists && len(clients) > 0 {
 		return clients
 	}

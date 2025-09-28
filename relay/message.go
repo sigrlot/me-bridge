@@ -9,6 +9,13 @@ type InMsg struct {
 }
 
 type OutMsg struct {
-	Nonce uint64 `json:"nonce"`
-	Data  []byte `json:"data"`
+	TxHash   string `json:"hash"`
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Amount   string `json:"amount"`
+}
+
+type BatchMsg struct {
+	Nonces uint64 `json:"nonces"`
+	Data   []byte `json:"data"`
 }

@@ -2,31 +2,31 @@ package relay
 
 // Relay 代表一个跨链桥，它包含源终端、目标终端和消息队列
 type Relay struct {
-	Source   *Endpoint
-	Target   *Endpoint
-	InChan   chan *Message // 跨入消息列表
-	BackChan chan *Message // 跨出消息列表
+	Source   *InEndpoint
+	Target   *OutEndpoint
+	InChan   chan *InMsg  // 跨入消息列表
+	BackChan chan *OutMsg // 跨出消息列表
 
 	FeeCalculator *FeeCalculator
 }
 
-func NewRelay(source *Endpoint, target *Endpoint, feeCalculator FeeCalculator) *Relay {
+func NewRelay(source *InEndpoint, target *OutEndpoint, feeCalculator FeeCalculator) *Relay {
 	return &Relay{
 		Source:   source,
 		Target:   target,
-		InChan:   make(chan *Message, 1000),
-		BackChan: make(chan *Message, 1000),
+		InChan:   make(chan *InMsg, 1000),
+		BackChan: make(chan *OutMsg, 1000),
 
 		FeeCalculator: &feeCalculator,
 	}
 }
 
 func NewRelayWithConfig(config *RelayConfig) *Relay {
-	source := NewEndpointWithConfig(config.Source)
-	target := NewEndpointWithConfig(config.Target)
+	source := NewInEndpointWithConfig(config.Source)
+	target := NewOutEndpointWithConfig(config.Target)
 
 	return &Relay{
-		Source:   source, 
+		Source:   source,
 		Target:   target,
 		InChan:   make(chan *Message, 1000),
 		BackChan: make(chan *Message, 1000),
@@ -36,8 +36,8 @@ func NewRelayWithConfig(config *RelayConfig) *Relay {
 }
 
 func (r *Relay) Work() error {
-	go r.Source.Work(r.InChan, r.BackChan)
-	go r.Target.Work(r.BackChan, r.InChan)
+	// go r.Source.Work(r.InChan, r.BackChan)
+	// go r.Target.Work(r.BackChan, r.InChan)
 
 	return nil
 }
