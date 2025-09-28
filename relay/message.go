@@ -1,5 +1,10 @@
 package relay
 
+// Message 通用消息接口
+type Message interface {
+	GetNonce() uint64
+}
+
 type InMsg struct {
 	Nonce    uint64 `json:"nonce"`
 	TxHash   string `json:"hash"`
@@ -9,6 +14,7 @@ type InMsg struct {
 }
 
 type OutMsg struct {
+	Nonce    uint64 `json:"nonce"`
 	TxHash   string `json:"hash"`
 	Sender   string `json:"sender"`
 	Receiver string `json:"receiver"`

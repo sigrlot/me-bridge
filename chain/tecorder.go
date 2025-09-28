@@ -1,4 +1,4 @@
-package relay
+package chain
 
 import (
 	"sync"
@@ -7,8 +7,8 @@ import (
 	logger "github.com/st-chain/me-bridge/log"
 )
 
-// NonceManager 管理异步交易的nonce分配
-type NonceManager struct {
+// TxRecorder 管理异步交易的nonce分配
+type TxRecorder struct {
 	mu           sync.RWMutex
 	currentNonce uint64
 	pendingTxs   map[uint64]*PendingTx // nonce -> pending transaction
@@ -51,8 +51,8 @@ func (s TxStatus) String() string {
 }
 
 // NewNonceManager 创建一个从指定nonce开始的新nonce管理器
-func NewNonceManager(startNonce uint64) *NonceManager {
-	return &NonceManager{
+func NewNonceManager(startNonce uint64) *TxRecorder {
+	return &TxRecorder{
 		currentNonce: startNonce,
 		pendingTxs:   make(map[uint64]*PendingTx),
 		logger:       logger.WithComponent("nonce-manager"),
@@ -60,7 +60,7 @@ func NewNonceManager(startNonce uint64) *NonceManager {
 }
 
 // AllocateNonce 为消息分配新的nonce并进行跟踪
-func (nm *NonceManager) AllocateNonce(msg *OutMsg) uint64 {
+func (nm *TxRecorder) AllocateNonce(msg *OutMsg) uint64 {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -87,7 +87,7 @@ func (nm *NonceManager) AllocateNonce(msg *OutMsg) uint64 {
 }
 
 // MarkSubmitted 将交易标记为已提交并记录其哈希
-func (nm *NonceManager) MarkSubmitted(nonce uint64, txHash string) error {
+func (nm *TxRecorder) MarkSubmitted(nonce uint64, txHash string) error {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -112,7 +112,7 @@ func (nm *NonceManager) MarkSubmitted(nonce uint64, txHash string) error {
 }
 
 // MarkConfirmed 将交易标记为已确认并从待处理列表中移除
-func (nm *NonceManager) MarkConfirmed(nonce uint64) error {
+func (nm *TxRecorder) MarkConfirmed(nonce uint64) error {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -136,7 +136,7 @@ func (nm *NonceManager) MarkConfirmed(nonce uint64) error {
 }
 
 // MarkFailed 将交易标记为失败
-func (nm *NonceManager) MarkFailed(nonce uint64) error {
+func (nm *TxRecorder) MarkFailed(nonce uint64) error {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -158,7 +158,7 @@ func (nm *NonceManager) MarkFailed(nonce uint64) error {
 }
 
 // GetPendingTx 根据nonce返回待处理交易
-func (nm *NonceManager) GetPendingTx(nonce uint64) (*PendingTx, bool) {
+func (nm *TxRecorder) GetPendingTx(nonce uint64) (*PendingTx, bool) {
 	nm.mu.RLock()
 	defer nm.mu.RUnlock()
 
@@ -173,21 +173,21 @@ func (nm *NonceManager) GetPendingTx(nonce uint64) (*PendingTx, bool) {
 }
 
 // GetCurrentNonce 返回当前nonce（下一个将被分配的）
-func (nm *NonceManager) GetCurrentNonce() uint64 {
+func (nm *TxRecorder) GetCurrentNonce() uint64 {
 	nm.mu.RLock()
 	defer nm.mu.RUnlock()
 	return nm.currentNonce
 }
 
 // GetPendingCount 返回待处理交易的数量
-func (nm *NonceManager) GetPendingCount() int {
+func (nm *TxRecorder) GetPendingCount() int {
 	nm.mu.RLock()
 	defer nm.mu.RUnlock()
 	return len(nm.pendingTxs)
 }
 
 // CleanupStale 移除超过给定时间的过期待处理交易
-func (nm *NonceManager) CleanupStale(maxAge time.Duration) int {
+func (nm *TxRecorder) CleanupStale(maxAge time.Duration) int {
 	nm.mu.Lock()
 	defer nm.mu.Unlock()
 
@@ -217,7 +217,7 @@ func (nm *NonceManager) CleanupStale(maxAge time.Duration) int {
 }
 
 // GetRetryableTxs 返回可以重试的交易
-func (nm *NonceManager) GetRetryableTxs(maxRetries int) []*PendingTx {
+func (nm *TxRecorder) GetRetryableTxs(maxRetries int) []*PendingTx {
 	nm.mu.RLock()
 	defer nm.mu.RUnlock()
 

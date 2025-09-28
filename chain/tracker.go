@@ -10,7 +10,7 @@ type TransactionTracker struct {
 	mu                sync.RWMutex
 	confirmationDepth int
 	transactions      map[string]*TrackedTx // txHash -> TrackedTx
-	nonceManager      *NonceManager
+	nonceManager      *TxRecorder
 }
 
 // TrackedTx 代表正在跟踪确认的交易
@@ -26,7 +26,7 @@ type TrackedTx struct {
 }
 
 // NewTransactionTracker 创建一个新的交易跟踪器
-func NewTransactionTracker(confirmationDepth int, nonceManager *NonceManager) *TransactionTracker {
+func NewTransactionTracker(confirmationDepth int, nonceManager *TxRecorder) *TransactionTracker {
 	return &TransactionTracker{
 		confirmationDepth: confirmationDepth,
 		transactions:      make(map[string]*TrackedTx),

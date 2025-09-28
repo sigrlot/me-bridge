@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// KeyManager 定义了签名器的通用接口
-type KeyManager interface {
+// Signer 定义了签名器的通用接口
+type Signer interface {
 	// GetAddress 获取签名器的以太坊地址
 	GetAddress(ctx context.Context) (common.Address, error)
 
@@ -25,4 +25,7 @@ type KeyManager interface {
 
 	// Close 关闭签名器并清理资源
 	Close() error
+
+	// HandleError 处理签名器级别的错误
+	HandleError(ctx context.Context, err error, metadata map[string]interface{}) error
 }
