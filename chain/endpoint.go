@@ -65,8 +65,8 @@ func (e *OutEndpoint) ProcessInMsgs(msgs <-chan *relay.InMsg) error {
 	return e.GetClient().ProcessInMsgs(msgs)
 }
 
-func (e *OutEndpoint) SubscribeToOutMsgs() (<-chan *relay.OutMsg, error) {
-	return e.GetClient().SubscribeToOutMsgs()
+func (e *OutEndpoint) SubscribeToOutMsgs(msgs <-chan *relay.OutMsg) error {
+	return e.GetClient().SubscribeToOutMsgs(msgs)
 }
 
 func (e *OutEndpoint) ConfirmOutMsgs(msgs []relay.OutMsg) error {
