@@ -6,25 +6,8 @@ import (
 )
 
 type Server struct {
-	config *ServerConfig
+	
 	Relays map[string]*relay.Relay
-}
-
-func NewServerWithConfig(config *ServerConfig) *Server {
-	for _, netConfig := range config.Networks {
-		chain.ClientsBuilder(netConfig.Name, netConfig.ClientConfigs)
-	}
-
-	relays := make(map[string]*relay.Relay)
-	for _, relayConfig := range config.Relays {
-		relay := relay.NewRelayWithConfig(relayConfig)
-		relays[relayConfig.Name] = relay
-	}
-
-	return &Server{
-		config: config,
-		Relays: relays,
-	}
 }
 
 func (s *Server) Start() error {

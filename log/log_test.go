@@ -13,58 +13,24 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func TestDefaultConfig(t *testing.T) {
-	config := DefaultConfig()
-	if config.Level != "info" {
-		t.Errorf("Expected level 'info', got '%s'", config.Level)
-	}
-	if config.Format != "ethereum" {
-		t.Errorf("Expected format 'ethereum', got '%s'", config.Format)
-	}
-	if config.Output != "stdout" {
-		t.Errorf("Expected output 'stdout', got '%s'", config.Output)
-	}
-	if config.Path != "logs/app.log" {
-		t.Errorf("Expected output 'stdout', got '%s'", config.Path)
-	}
-}
-
 func TestNewLoggerWithInvalidLevel(t *testing.T) {
-	config := &Config{
-		Level:  "invalid",
-		Format: "json",
-		Output: "stdout",
-	}
-
-	_, err := NewLogger(config)
+	_, err := NewLogger("invalid", "json", "stdout", "")
 	if err == nil {
 		t.Error("Expected error for invalid log level")
 	}
 }
 
-func TestNewLoggerWithInvalidOutput(t *testing.T) {
-	config := &Config{
-		Level:  "info",
-		Format: "json",
-		Output: "invalid",
-	}
-
-	_, err := NewLogger(config)
+func TestNewLoggerWithInvalidFormat(t *testing.T) {
+	_, err := NewLogger("info", "invalid", "stdout", "")
 	if err == nil {
-		t.Error("Expected error for invalid output type")
+		t.Error("Expected error for invalid format type")
 	}
 }
 
-func TestNewLoggerWithInvalidFormat(t *testing.T) {
-	config := &Config{
-		Level:  "info",
-		Format: "invalid",
-		Output: "stdout",
-	}
-
-	_, err := NewLogger(config)
+func TestNewLoggerWithInvalidOutput(t *testing.T) {
+	_, err := NewLogger("info", "json", "invalid", "")
 	if err == nil {
-		t.Error("Expected error for invalid format type")
+		t.Error("Expected error for invalid output type")
 	}
 }
 
@@ -72,14 +38,7 @@ func TestNewLoggerFileOutput(t *testing.T) {
 	tempDir := t.TempDir()
 	logFile := filepath.Join(tempDir, "test.log")
 
-	config := &Config{
-		Level:  "info",
-		Format: "json",
-		Output: "file",
-		Path:   logFile,
-	}
-
-	logger, err := NewLogger(config)
+	logger, err := NewLogger("info", "json", "file", logFile)
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
@@ -186,7 +145,7 @@ func TestAllLogLevels(t *testing.T) {
 
 func TestGlobalLogger(t *testing.T) {
 	// Test that global logger is initialized
-	logger := GetLogger()
+	logger := GetRootLogger()
 	if logger == nil {
 		t.Error("Global logger should not be nil")
 	}
@@ -205,24 +164,18 @@ func TestGlobalLogger(t *testing.T) {
 }
 
 func TestSetLogger(t *testing.T) {
-	// Test init with nil config (should use default)
-	err := SetLogger(nil)
-	if err != nil {
-		t.Errorf("Init with nil config should not fail: %v", err)
-	}
-
 	// Test init with custom config
 	tempDir := t.TempDir()
-	config := &Config{
-		Level:  "debug",
-		Format: "json",
-		Output: "file",
-		Path:   filepath.Join(tempDir, "init_test.log"),
+	logFile := filepath.Join(tempDir, "init_test.log")
+
+	logger, err := NewLogger("debug", "json", "file", logFile)
+	if err != nil {
+		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	err = SetLogger(config)
-	if err != nil {
-		t.Errorf("Init with custom config should not fail: %v", err)
+	SetRootLogger(logger)
+	if GetRootLogger() != logger {
+		t.Error("Global logger was not set correctly")
 	}
 }
 
@@ -254,14 +207,9 @@ func TestJSONOutput(t *testing.T) {
 
 func TestConcurrentLogging(t *testing.T) {
 	tempDir := t.TempDir()
-	config := &Config{
-		Level:  "info",
-		Format: "json",
-		Output: "file",
-		Path:   filepath.Join(tempDir, "concurrent_test.log"),
-	}
+	logFile := filepath.Join(tempDir, "concurrent_test.log")
 
-	logger, err := NewLogger(config)
+	logger, err := NewLogger("info", "json", "file", logFile)
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
@@ -283,7 +231,7 @@ func TestConcurrentLogging(t *testing.T) {
 	}
 
 	// Just verify the file exists and is not empty
-	info, err := os.Stat(config.Path)
+	info, err := os.Stat(logFile)
 	if err != nil {
 		t.Errorf("Log file should exist: %v", err)
 	}
@@ -294,14 +242,9 @@ func TestConcurrentLogging(t *testing.T) {
 
 func TestLogRotation(t *testing.T) {
 	tempDir := t.TempDir()
-	config := &Config{
-		Level:  "info",
-		Format: "json",
-		Output: "file",
-		Path:   filepath.Join(tempDir, "rotation_test.log"),
-	}
+	logFile := filepath.Join(tempDir, "rotation_test.log")
 
-	logger, err := NewLogger(config)
+	logger, err := NewLogger("info", "json", "file", logFile)
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
@@ -312,7 +255,7 @@ func TestLogRotation(t *testing.T) {
 	}
 
 	// Check if log file exists
-	if _, err := os.Stat(config.Path); os.IsNotExist(err) {
+	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		t.Error("Log file should exist")
 	}
 }

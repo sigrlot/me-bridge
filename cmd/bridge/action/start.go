@@ -27,7 +27,7 @@ func StartAction(ctx *cli.Context) error {
 
 	// Initialize logger with config from file if available
 	if serverConfig.Logger != nil {
-		if err := log.SetLogger(serverConfig.Logger); err != nil {
+		if err := log.SetRootLogger(serverConfig.Logger); err != nil {
 			return fmt.Errorf("failed to initialize logger: %w", err)
 		}
 	}
