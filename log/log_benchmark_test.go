@@ -8,9 +8,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// BenchmarkZerologJSON benchmarks JSON logging
+// BenchmarkZerologJSON 基准测试：JSON 日志
 func BenchmarkZerologJson(b *testing.B) {
-	// Use direct zerolog to avoid file rotation issues in benchmarks
+	// 直接使用 zerolog，避免基准测试中触发文件轮转
 	logger := zerolog.New(io.Discard).With().Timestamp().Logger()
 	l := &Logger{logger: logger}
 
@@ -22,9 +22,9 @@ func BenchmarkZerologJson(b *testing.B) {
 	})
 }
 
-// BenchmarkZerologWithFields benchmarks logging with fields
+// BenchmarkZerologWithFields 基准测试：带字段的日志
 func BenchmarkZerologJsonWithFields(b *testing.B) {
-	// Use direct zerolog to avoid file rotation issues in benchmarks
+	// 直接使用 zerolog，避免基准测试中触发文件轮转
 	logger := zerolog.New(io.Discard).With().Timestamp().Logger()
 	l := &Logger{logger: logger}
 
@@ -41,9 +41,9 @@ func BenchmarkZerologJsonWithFields(b *testing.B) {
 	})
 }
 
-// BenchmarkZerologConsole benchmarks console logging
+// BenchmarkZerologConsole 基准测试：控制台日志
 func BenchmarkZerologConsole(b *testing.B) {
-	// Use console writer with io.Discard to avoid file rotation issues
+	// 使用 ConsoleWriter 且输出到 io.Discard，避免文件轮转影响
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        io.Discard,
 		TimeFormat: time.RFC3339,
@@ -60,9 +60,9 @@ func BenchmarkZerologConsole(b *testing.B) {
 	})
 }
 
-// BenchmarkZerologConsole benchmarks console logging with fields
+// BenchmarkZerologConsoleWithFields 基准测试：控制台日志（含字段）
 func BenchmarkZerologConsoleWithFields(b *testing.B) {
-	// Use console writer with io.Discard to avoid file rotation issues
+	// 使用 ConsoleWriter 且输出到 io.Discard，避免文件轮转影响
 	consoleWriter := zerolog.ConsoleWriter{
 		Out:        io.Discard,
 		TimeFormat: time.RFC3339,
@@ -84,9 +84,9 @@ func BenchmarkZerologConsoleWithFields(b *testing.B) {
 	})
 }
 
-// BenchmarkZerologBeut benchmarks Ethereum-style logging
+// BenchmarkZerologBeut 基准测试：以太坊风格日志
 func BenchmarkZerologBeut(b *testing.B) {
-	// Use Ethereum-style writer with io.Discard to avoid file rotation issues
+	// 使用以太坊风格写入器并输出到 io.Discard，避免文件轮转影响
 	ethWriter := BeutConsoleWriter{
 		Out:        io.Discard,
 		NoColor:    true,
@@ -103,9 +103,9 @@ func BenchmarkZerologBeut(b *testing.B) {
 	})
 }
 
-// BenchmarkZerologBeutWithModule benchmarks Ethereum-style logging with module
+// BenchmarkZerologBeutWithFields 基准测试：以太坊风格日志（含字段）
 func BenchmarkZerologBeutWithFields(b *testing.B) {
-	// Use Ethereum-style writer with io.Discard to avoid file rotation issues
+	// 使用以太坊风格写入器并输出到 io.Discard，避免文件轮转影响
 	ethWriter := BeutConsoleWriter{
 		Out:        io.Discard,
 		NoColor:    true,

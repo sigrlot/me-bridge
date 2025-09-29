@@ -13,7 +13,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// Logger 包装 zerolog.Logger 以提供额外功能
+// Logger 包装 zerolog.Logger，提供额外的封装与便捷能力
 type Logger struct {
 	Level    string // 日志级别
 	Format   string // 日志格式
@@ -63,7 +63,7 @@ func NewLogger(level string, format string, output string, filename string) (*Lo
 		return nil, fmt.Errorf("unsupported output type: %s", output)
 	}
 
-	// 配置格式
+	// 配置输出格式
 	var logger zerolog.Logger
 	switch strings.ToLower(format) {
 	case "json":
@@ -72,7 +72,7 @@ func NewLogger(level string, format string, output string, filename string) (*Lo
 		consoleWriter := zerolog.ConsoleWriter{
 			Out:        writer,
 			TimeFormat: time.RFC3339,
-			NoColor:    output == "file", // Disable color for file output
+			NoColor:    output == "file", // 文件输出禁用颜色
 		}
 		logger = zerolog.New(consoleWriter)
 	case "beut":
@@ -81,12 +81,13 @@ func NewLogger(level string, format string, output string, filename string) (*Lo
 		ethWriter := BeutConsoleWriter{
 			Out:        writer,
 			TimeFormat: time.RFC3339,
-			NoColor:    output == "file", // Disable color for file output
+			NoColor:    output == "file", // 文件输出禁用颜色
 
 		}
 		logger = zerolog.New(ethWriter)
 	default:
-		return nil, fmt.Errorf("unsupported format type: %s (supported: json, console, ethereum)", format)
+		// 列出受支持的格式供提示
+		return nil, fmt.Errorf("unsupported format type: %s (supported: json, console, beut)", format)
 	}
 
 	// 添加时间戳

@@ -45,7 +45,7 @@ func TestNewLoggerFileOutput(t *testing.T) {
 
 	logger.Info("test message")
 
-	// Check if file exists
+	// 检查文件是否创建
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		t.Error("Log file was not created")
 	}
@@ -71,7 +71,7 @@ func TestLoggerWithComponent(t *testing.T) {
 func TestLoggerWithFields(t *testing.T) {
 	var buf bytes.Buffer
 
-	// Create a logger that writes to buffer for testing
+	// 创建写入缓冲区的日志器用于测试
 	zlog := zerolog.New(&buf).With().Timestamp().Logger()
 	logger := &Logger{logger: zlog}
 
@@ -182,7 +182,7 @@ func TestSetLogger(t *testing.T) {
 func TestJSONOutput(t *testing.T) {
 	var buf bytes.Buffer
 
-	// We need to manually create a JSON logger for testing
+	// 手动创建一个 JSON 日志器用于测试
 	zlog := zerolog.New(&buf).With().Timestamp().Logger()
 	logger := &Logger{logger: zlog}
 
@@ -190,7 +190,7 @@ func TestJSONOutput(t *testing.T) {
 
 	output := buf.String()
 
-	// Verify it's valid JSON
+	// 校验输出是否为合法 JSON
 	var jsonData map[string]any
 	if err := json.Unmarshal([]byte(output), &jsonData); err != nil {
 		t.Errorf("Output is not valid JSON: %v", err)
@@ -214,7 +214,7 @@ func TestConcurrentLogging(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	// Run concurrent logging
+	// 并发写日志
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func(id int) {
@@ -225,12 +225,12 @@ func TestConcurrentLogging(t *testing.T) {
 		}(i)
 	}
 
-	// Wait for all goroutines to complete
+	// 等待所有 goroutine 完成
 	for i := 0; i < 10; i++ {
 		<-done
 	}
 
-	// Just verify the file exists and is not empty
+	// 仅验证文件存在且非空
 	info, err := os.Stat(logFile)
 	if err != nil {
 		t.Errorf("Log file should exist: %v", err)
@@ -249,12 +249,12 @@ func TestLogRotation(t *testing.T) {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
 
-	// Write some log messages
+	// 写入一些日志
 	for i := 0; i < 1000; i++ {
 		logger.Info("This is a test message for log rotation functionality", map[string]any{"iteration": i})
 	}
 
-	// Check if log file exists
+	// 检查日志文件存在
 	if _, err := os.Stat(logFile); os.IsNotExist(err) {
 		t.Error("Log file should exist")
 	}
@@ -263,7 +263,7 @@ func TestLogRotation(t *testing.T) {
 func TestEthereumFormat(t *testing.T) {
 	var buf bytes.Buffer
 
-	// Create ethereum-style logger that writes to buffer
+	// 创建以太坊风格的日志器，写入到缓冲区
 	ethWriter := BeutConsoleWriter{
 		Out:     &buf,
 		NoColor: true, // Disable color for testing
@@ -277,7 +277,7 @@ func TestEthereumFormat(t *testing.T) {
 
 	output := buf.String()
 
-	// Check ethereum-style format
+	// 校验以太坊风格格式
 	if !strings.Contains(output, "INFO[") {
 		t.Error("Expected ethereum-style INFO level format")
 	}
@@ -295,7 +295,7 @@ func TestEthereumFormat(t *testing.T) {
 	}
 }
 
-// Performance test to ensure we maintain good performance
+// 性能测试，确保性能满足预期
 func TestPerformance(t *testing.T) {
 	var buf bytes.Buffer
 	zlog := zerolog.New(&buf).Level(zerolog.InfoLevel)
