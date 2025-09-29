@@ -8,6 +8,7 @@
 
 定义 client 实现范式
 分层处理错误，实现 errorhandler
+增加推出通道，退出订阅和处理协程
 
 endpoint:
 

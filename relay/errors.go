@@ -20,11 +20,6 @@ var (
 	ErrGasEstimationFailed = errors.New("gas estimation failed")
 )
 
-// ErrorHandler 通用错误处理接口
-type ErrorHandler interface {
-	HandleError(ctx context.Context, err error, metadata map[string]interface{}) error
-}
-
 // ErrorAction 定义错误处理后的动作
 type ErrorAction int
 
@@ -54,15 +49,21 @@ const (
 	LevelSigner                     // 签名器级别
 )
 
-// BaseErrorHandler 基础错误处理器
-type BaseErrorHandler struct {
-	Level      ErrorLevel
+// ErrorHandler 基础错误处理器
+type ErrorHandler struct {
 	MaxRetries int
 	RetryDelay time.Duration
 }
 
+func NewErrorHandler(maxRetries int, retryDelay time.Duration) *ErrorHandler {
+	return &ErrorHandler{
+		MaxRetries: maxRetries,
+		RetryDelay: retryDelay,
+	}
+}
+
 // HandleError 基础错误处理逻辑
-func (h *BaseErrorHandler) HandleError(ctx context.Context, err error, metadata map[string]interface{}) error {
+func (h *ErrorHandler) HandleError(ctx context.Context, err error, metadata map[string]interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -89,7 +90,7 @@ func (h *BaseErrorHandler) HandleError(ctx context.Context, err error, metadata 
 }
 
 // classifyError 对错误进行分类
-func (h *BaseErrorHandler) classifyError(err error) ErrorAction {
+func (h *ErrorHandler) classifyError(err error) ErrorAction {
 	errMsg := strings.ToLower(err.Error())
 
 	// 可重试的错误
@@ -111,7 +112,7 @@ func (h *BaseErrorHandler) classifyError(err error) ErrorAction {
 	return ActionEscalate
 }
 
-func (h *BaseErrorHandler) isRetryableError(errMsg string) bool {
+func (h *ErrorHandler) isRetryableError(errMsg string) bool {
 	retryablePatterns := []string{
 		"timeout", "network", "connection", "temporary",
 		"nonce too low", "gas", "underpriced",
@@ -125,7 +126,7 @@ func (h *BaseErrorHandler) isRetryableError(errMsg string) bool {
 	return false
 }
 
-func (h *BaseErrorHandler) isIgnorableError(errMsg string) bool {
+func (h *ErrorHandler) isIgnorableError(errMsg string) bool {
 	ignorablePatterns := []string{
 		"already known", "duplicate",
 	}
@@ -138,7 +139,7 @@ func (h *BaseErrorHandler) isIgnorableError(errMsg string) bool {
 	return false
 }
 
-func (h *BaseErrorHandler) isFatalError(errMsg string) bool {
+func (h *ErrorHandler) isFatalError(errMsg string) bool {
 	fatalPatterns := []string{
 		"invalid signature", "unauthorized", "permission denied",
 	}
@@ -151,7 +152,7 @@ func (h *BaseErrorHandler) isFatalError(errMsg string) bool {
 	return false
 }
 
-func (h *BaseErrorHandler) handleRetry(ctx context.Context, err error, metadata map[string]interface{}) error {
+func (h *ErrorHandler) handleRetry(ctx context.Context, err error, metadata map[string]interface{}) error {
 	retryCount := 0
 	if count, ok := metadata["retryCount"].(int); ok {
 		retryCount = count

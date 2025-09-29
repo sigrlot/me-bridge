@@ -4,33 +4,29 @@ import "time"
 
 // Relay 代表一个跨链桥，它包含源终端、目标终端和消息队列
 type Relay struct {
-	Config        *RelayConfig
 	Source        InEndpoint
 	Target        OutEndpoint
-	NonceManager  *NonceManager
 	FeeCalculator FeeCalculator
 
 	// 消息路由的内部通道
-	inChan    chan InMsg     // 跨入消息列表（从源端订阅）
-	outChan   chan OutMsg    // 跨出消息列表（从目标端订阅）
-	batchChan chan *BatchMsg // 批量消息列表（从目标端订阅）
+	InQueue    *Queue[InMsg]    // 跨入消息队列（从源端订阅）
+	OutQueue   *Queue[OutMsg]   // 跨出消息队列（从目标端订阅）
+	BatchQueue *Queue[BatchMsg] // 跨出预签名批量消息队列（从目标端订阅）
 
 	// 控制通道
 	stopCh chan struct{}
 	done   chan struct{}
 }
 
-func NewRelay(config *RelayConfig, source InEndpoint, target OutEndpoint, feeCalculator FeeCalculator, startNonce uint64) *Relay {
+func NewRelay(source InEndpoint, target OutEndpoint, feeCalculator FeeCalculator, startNonce uint64) *Relay {
 	return &Relay{
-		Config:        config,
 		Source:        source,
 		Target:        target,
-		NonceManager:  NewNonceManager(startNonce),
 		FeeCalculator: feeCalculator,
 
-		inChan:    make(chan InMsg, 1000),
-		outChan:   make(chan OutMsg, 1000),
-		batchChan: make(chan *BatchMsg, 1000),
+		InQueue:   NewQueue[InMsg](0, 1000),
+		outChan:   NewQueue[OutMsg](0, 1000),
+		batchChan: NewQueue[BatchMsg](0, 1000),
 
 		stopCh: make(chan struct{}),
 		done:   make(chan struct{}),
@@ -72,7 +68,7 @@ func (r *Relay) processInboundMessages(inChan <-chan InMsg) {
 	for {
 		select {
 		case msg := <-inChan:
-			r.inChan <- msg
+			r.InQueue <- msg
 		case <-r.stopCh:
 			return
 		}
@@ -107,7 +103,7 @@ func (r *Relay) processBatchMessages(batchChan <-chan *BatchMsg) {
 func (r *Relay) processTargetMessages() {
 	for {
 		select {
-		case inMsg := <-r.inChan:
+		case inMsg := <-r.InQueue:
 			// 将InMsg转换为OutMsg并进行nonce管理
 			outMsg := &OutMsg{
 				Sender:   inMsg.Sender,
@@ -192,7 +188,7 @@ func (r *Relay) GetStatus() map[string]interface{} {
 	return map[string]interface{}{
 		"current_nonce":  r.NonceManager.GetCurrentNonce(),
 		"pending_count":  r.NonceManager.GetPendingCount(),
-		"in_chan_len":    len(r.inChan),
+		"in_chan_len":    len(r.InQueue),
 		"out_chan_len":   len(r.outChan),
 		"batch_chan_len": len(r.batchChan),
 	}

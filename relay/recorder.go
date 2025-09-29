@@ -1,4 +1,4 @@
-package chain
+package relay
 
 import (
 	"sync"
@@ -50,8 +50,8 @@ func (s TxStatus) String() string {
 	}
 }
 
-// NewNonceManager 创建一个从指定nonce开始的新nonce管理器
-func NewNonceManager(startNonce uint64) *TxRecorder {
+// NewTxRecorder 创建一个从指定nonce开始的新nonce管理器
+func NewTxRecorder(startNonce uint64) *TxRecorder {
 	return &TxRecorder{
 		currentNonce: startNonce,
 		pendingTxs:   make(map[uint64]*PendingTx),

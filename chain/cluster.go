@@ -20,7 +20,7 @@ type Cluster[T Client] struct {
 	monitorInterval time.Duration
 	stopCh          chan struct{}
 	logger          *log.Logger
-	errorHandler    *relay.BaseErrorHandler
+	errorHandler    *relay.ErrorHandler
 }
 
 // NewCluster creates a new cluster with given clients and monitor interval.
@@ -31,7 +31,7 @@ func NewCluster[T Client](clients []T, monitorInterval time.Duration) *Cluster[T
 		monitorInterval: monitorInterval,
 		stopCh:          make(chan struct{}),
 		logger:          log.WithComponent("cluster"),
-		errorHandler: &relay.BaseErrorHandler{
+		errorHandler: &relay.ErrorHandler{
 			Level:      relay.LevelCluster,
 			MaxRetries: 3,
 			RetryDelay: time.Second * 2,

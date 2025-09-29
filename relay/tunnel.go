@@ -1,11 +1,11 @@
 package relay
 
 import (
-	"context"
-	"fmt"
 	"time"
 
+	"github.com/st-chain/me-bridge/log"
 	"github.com/st-chain/me-bridge/signer"
+	"github.com/st-chain/me-bridge/types"
 )
 
 type Sequence struct {
@@ -20,179 +20,104 @@ type InTunnel struct {
 	Target   OutEndpoint
 	Sequence Sequence
 
-	Key           *signer.Signer
+	Key           signer.Signer
+	Nonce         uint64 // 当前使用的nonce
 	TxRecorder    *TxRecorder
-	FeeCalculator *MockFeeCalculator
+	FeeCalculator *FeeCalculator
 
-	msgs         chan InMsg        // 跨入消息列表（从源端订阅）
-	errorHandler *BaseErrorHandler // 错误处理器
+	Msgs         chan InMsg         // 跨入消息通道（从源端订阅）
+	ErrorHandler types.ErrorHandler // 错误处理器
+	logger       log.Logger
 
 	// 控制通道
-	stopCh chan struct{}
-	done   chan struct{}
+	// stopCh chan struct{}
+	// done   chan struct{}
 }
 
-func NewInTunnel(path string, source InEndpoint, target OutEndpoint, keyManager *signer.Signer, txRecorder *TxRecorder, sequenceManager *SequenceManager, feeCalculator FeeCalculator) *InTunnel {
+func NewInTunnel(source InEndpoint, target OutEndpoint, key signer.Signer, feeCalculator *FeeCalculator) *InTunnel {
 	return &InTunnel{
-		Path:            path,
-		Source:          source,
-		Target:          target,
-		KeyManager:      keyManager,
-		TxRecorder:      txRecorder,
-		SequenceManager: sequenceManager,
-		FeeCalculator:   feeCalculator,
-		msgs:            make(chan InMsg, 256),
-		errorHandler: &BaseErrorHandler{
-			Level:      LevelRelay,
-			MaxRetries: 5,
-			RetryDelay: time.Second * 10,
-		},
-		stopCh: make(chan struct{}),
-		done:   make(chan struct{}),
+		Path:          "InTunnel", // TODO: source.Name() + "->" + target.Name(),
+		Source:        source,
+		Target:        target,
+		Key:           key,
+		TxRecorder:    NewTxRecorder(0),
+		FeeCalculator: feeCalculator,
+		Msgs:          make(chan InMsg, 1024),
+		ErrorHandler:  NewErrorHandler(3, time.Second*10),
 	}
 }
 
-// Sync 从Endpoint同步Tunnel的当前跨链信息
-func (t *InTunnel) Sync() {
-	t.CurrSequence, t.OnChainHeight = t.Target.GetSequence()
-	t.CurrNonce = t.Target.GetCurrentNonce()
+// Init 同步确定性跨链信息
+func (t *InTunnel) Init() {
+	seq, height := t.Target.GetSequence()
+	t.Sequence.ID = seq
+	t.Sequence.Height = height
+	t.Nonce = t.Target.GetNonce(t.Key.Address())
 }
 
-func (t *InTunnel) GetPastMsgs(fromHeight, toHeight uint64) error {
-	msgs, err := t.Source.FilterInMsgs(fromHeight, toHeight)
+// GetHistoryMsgs 获取历史跨链消息
+func (t *InTunnel) GetHistoryMsgs() error {
+	lastHeight := max(t.Sequence.Height, t.Source.LastHeight())
+	msgs, err := t.Source.FilterInMsgs(t.Sequence.Height, lastHeight)
 	if err != nil {
 		return err
 	}
-
 	for _, msg := range msgs {
-		t.msgs <- msg
+		t.Msgs <- msg
 	}
 
 	return nil
 }
 
+// Start 启动 Tunnel
 func (t *InTunnel) Start() error {
-	t.Sync()
+	t.Init()
 
 	// 同步源端历史消息
-	if err := t.GetPastMsgs(0, t.OnChainHeight); err != nil {
-		return t.HandleError(context.Background(), err, map[string]interface{}{
-			"operation":  "GetPastMsgs",
-			"fromHeight": 0,
-			"toHeight":   t.OnChainHeight,
+	// TODO: 能否用订阅直接代替
+	if err := t.GetHistoryMsgs(); err != nil {
+		return t.HandleError(err, map[string]interface{}{
+			"operation": "GetHistoryMsgs",
 		})
 	}
 
 	// 订阅源端入向消息
-	if err := t.Source.SubscribeToInMsgs(t.msgs); err != nil {
-		return t.HandleError(context.Background(), err, map[string]interface{}{
+	if err := t.Source.SubscribeToInMsgs(t.Msgs); err != nil {
+		// TODO: 退出订阅
+		return t.HandleError(err, map[string]interface{}{
 			"operation": "SubscribeToInMsgs",
 		})
 	}
 
 	// 启动消息处理协程
-	go t.processMessages()
-
-	return nil
-}
-
-// processMessages 处理消息的主循环
-func (t *InTunnel) processMessages() {
-	defer close(t.done)
-
-	for {
-		select {
-		case msg, ok := <-t.msgs:
-			if !ok {
-				return
-			}
-			t.handleMessage(msg)
-
-		case <-t.stopCh:
-			return
-		}
-	}
-}
-
-// handleMessage 处理单个消息
-func (t *InTunnel) handleMessage(msg InMsg) {
-	ctx := context.Background()
-	metadata := map[string]interface{}{
-		"msgNonce": msg.Nonce,
-		"msgHash":  msg.TxHash,
-	}
-
-	// 处理消息
-	if err := t.Target.ProcessInMsgs(make(chan InMsg, 1)); err != nil {
-		// 使用分层错误处理
-		if handleErr := t.HandleError(ctx, err, metadata); handleErr != nil {
-			t.logError(fmt.Sprintf("Failed to handle message processing error: %v", handleErr))
-		}
-	}
-}
-
-// HandleError 处理 Relay 级别的错误
-func (t *InTunnel) HandleError(ctx context.Context, err error, metadata map[string]interface{}) error {
-	t.logError(fmt.Sprintf("Relay handling error: %v, metadata: %+v", err, metadata))
-
-	// 使用基础错误处理器
-	if handleErr := t.errorHandler.HandleError(ctx, err, metadata); handleErr != nil {
-		// 错误需要升级处理，这里是最高层级，记录并可能触发告警
-		t.logError(fmt.Sprintf("Fatal error at relay level: %v", handleErr))
-
-		// 尝试恢复操作
-		if err := t.recover(ctx, err, metadata); err != nil {
-			return fmt.Errorf("recovery failed: %w", err)
-		}
+	if err := t.Target.ProcessInMsgs(t.Msgs); err != nil {
+		// 根据错误策略处理错误
+		return t.HandleError(err, map[string]interface{}{
+			"operation": "ProcessInMsgs",
+		})
 	}
 
 	return nil
 }
 
-// recover 尝试恢复操作
-func (t *InTunnel) recover(ctx context.Context, err error, metadata map[string]interface{}) error {
-	t.logError("Attempting recovery at relay level")
+// HandleError 根据错误策略处理错误
+func (t *InTunnel) HandleError(err error, metadata map[string]interface{}) error {
+	t.logger.Error("handling error", metadata, map[string]any{
+		"error": err,
+	})
 
-	// 1. 重新同步状态
-	t.Sync()
-
-	// 2. 如果是消息处理错误，可能需要重新投递
-	if msgNonce, ok := metadata["msgNonce"].(uint64); ok {
-		// 重新构造消息并投递
-		msg := InMsg{
-			Nonce:  msgNonce,
-			TxHash: metadata["msgHash"].(string),
-			// 其他字段需要从存储中恢复
-		}
-
-		select {
-		case t.msgs <- msg:
-			t.logError("Message requeued for processing")
-		case <-time.After(time.Second * 5):
-			return fmt.Errorf("timeout requeuing message")
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+	// 调用错误处理器
+	if t.ErrorHandler != nil {
+		t.ErrorHandler.HandleError(nil, err, metadata)
 	}
 
-	return nil
+	// 重启 Tunnel
+	t.Stop()
+	return t.Start()
 }
 
 // Stop 停止 Tunnel
 func (t *InTunnel) Stop() {
-	close(t.stopCh)
-	<-t.done
-}
-
-// logError 记录错误日志
-func (t *InTunnel) logError(message string) {
-	// TODO: 使用实际的日志系统
-	// 这里简化为打印，实际应该使用结构化日志
-	fmt.Printf("[ERROR] Tunnel %s: %s\n", t.Path, message)
-}
-
-// logInfo 记录信息日志
-func (t *InTunnel) logInfo(message string) {
-	// TODO: 使用实际的日志系统
-	fmt.Printf("[INFO] Tunnel %s: %s\n", t.Path, message)
+	t.Source.Stop() // 停止源端订阅
+	t.Target.Stop() // 停止目标端处理
 }

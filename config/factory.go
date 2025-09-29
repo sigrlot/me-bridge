@@ -3,26 +3,26 @@ package server
 import (
 	"github.com/st-chain/me-bridge/chain"
 	"github.com/st-chain/me-bridge/relay"
+	"github.com/st-chain/me-bridge/server"
 )
 
-func NewServerWithConfig(config *ServerConfig) *Server {
+func NewServerWithConfig(config *ServerConfig) *server.Server {
 	for _, netConfig := range config.Networks {
 		chain.ClientsBuilder(netConfig.Name, netConfig.ClientConfigs)
 	}
 
 	relays := make(map[string]*relay.Relay)
 	for _, relayConfig := range config.Relays {
-		relay := relay.NewRelayWithConfig(relayConfig)
+		relay := NewRelayWithConfig(relayConfig)
 		relays[relayConfig.Name] = relay
 	}
 
-	return &Server{
-		config: config,
+	return &server.Server{
 		Relays: relays,
 	}
 }
 
-func NewRelayWithConfig(config *relay.RelayConfig) *relay.Relay {
+func NewRelayWithConfig(config *RelayConfig) *relay.Relay {
 	source := NewInEndpointWithConfig(config.Source)
 	target := NewOutEndpointWithConfig(config.Target)
 
@@ -38,7 +38,6 @@ func NewRelayWithConfig(config *relay.RelayConfig) *relay.Relay {
 
 func NewInEndpointWithConfig(config *EndpointConfig) *relay.InEndpoiont {
 	return &relay.InEndpoiont{
-		Config:  config,
 		Clients: ClientsProvider(config.Network),
 	}
 }

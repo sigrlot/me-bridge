@@ -11,8 +11,7 @@ type InEndpoint interface {
 // Watcher 订阅跨链消息
 type InWatcher interface {
 	FilterInMsgs(fromHeight, toHeight uint64) ([]InMsg, error)
-	// SubscribeToInMsgs 订阅入向消息；端点使用自己的配置
-	// 来决定订阅什么。返回入向消息的通道。
+	// SubscribeToInMsgs 订阅跨入消息，消息通过通道发送
 	SubscribeToInMsgs(msgs chan InMsg) error
 }
 
@@ -27,8 +26,8 @@ type OutEndpoint interface {
 	OutWatcher
 
 	// 状态同步方法
-	GetSequence() (uint64, uint64) // 返回 (sequence, height)
-	GetCurrentNonce() uint64       // 获取当前 nonce
+	GetSequence() (uint64, uint64)  // 返回 (sequence, height)
+	GetNonce(address string) uint64 // 获取 nonce
 }
 
 // Processor 处理跨链消息
